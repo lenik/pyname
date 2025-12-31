@@ -1,0 +1,117 @@
+.TH MKPYLINK 1 "2026-01-01" "pyname" "User Commands"
+.SH NAME
+mkpylink \- create symlinks/hardlinks for files with Chinese characters using pinyin names
+.SH SYNOPSIS
+.B mkpylink
+[\fIOPTIONS\fR] \fIFILE\fR...
+.SH DESCRIPTION
+\fBmkpylink\fR creates symlinks or hard links for files containing Chinese characters, using pinyin names for the links. It uses \fBpinyinize\fR for conversion and supports all pinyinize formatting options.
+.PP
+Files without Chinese characters are skipped. The original filename extension is preserved. Symlinks use relative paths when created in the same directory as the target.
+.SH OPTIONS
+.TP
+\fB-p\fR, \fB--pascal\fR
+Convert to PascalCase (default).
+.TP
+\fB-c\fR, \fB--camel\fR
+Convert to camelCase.
+.TP
+\fB-u\fR
+Add underscore separator (snake_case).
+.TP
+\fB-k\fR, \fB--kebab\fR
+Add hyphen separator (kebab-case).
+.TP
+\fB-s\fR, \fB--space\fR
+Add space separator.
+.TP
+\fB-U\fR, \fB--uppercase\fR
+Convert to UPPERCASE.
+.TP
+\fB-l\fR, \fB--lowercase\fR
+Convert to lowercase.
+.TP
+\fB-t\fR
+Include tone numbers.
+.TP
+\fB-f\fR, \fB--force\fR
+Overwrite existing links.
+.TP
+\fB-n\fR, \fB--nop\fR
+Show what would be done without actually creating links.
+.TP
+\fB--hard\fR
+Create hard links instead of symbolic links.
+.TP
+\fB-q\fR, \fB--quiet\fR
+Suppress informational messages.
+.TP
+\fB-v\fR, \fB--verbose\fR
+Show detailed progress, including elapsed time for conversion.
+.TP
+\fB-h\fR, \fB--help\fR
+Show help message and exit.
+.TP
+\fB--version\fR
+Show version information and exit.
+.SH EXAMPLES
+Create symlink:
+.RS
+.PP
+mkpylink 你好.txt
+.br
+Creates: NiHao.txt -> 你好.txt
+.RE
+.PP
+Create hard link:
+.RS
+.PP
+mkpylink --hard 你好.txt
+.br
+Creates hard link: NiHao.txt
+.RE
+.PP
+Dry run:
+.RS
+.PP
+mkpylink -n 你好.txt
+.br
+Shows: Would create symlink: NiHao.txt -> 你好.txt
+.RE
+.PP
+Force overwrite:
+.RS
+.PP
+mkpylink -f 你好.txt
+.br
+Overwrites existing link if present
+.RE
+.PP
+With formatting options:
+.RS
+.PP
+mkpylink -k -l 你好.txt
+.br
+Creates: ni-hao.txt -> 你好.txt
+.RE
+.PP
+Verbose output:
+.RS
+.PP
+mkpylink -v 你好.txt
+.br
+Shows conversion progress and elapsed time
+.RE
+.SH NOTES
+The pinyin conversion may be slow on first use due to jieba dictionary loading. Use \fB-v\fR to see elapsed time for each conversion.
+.PP
+Symlinks use relative paths when created in the same directory as the target file, making them more portable.
+.SH EXIT STATUS
+0 on success, 1 on error.
+.SH AUTHOR
+Lenik <pyname@bodz.net>
+.SH "SEE ALSO"
+.BR test-zh (1),
+.BR pinyinize (1),
+.BR ren2py (1)
+

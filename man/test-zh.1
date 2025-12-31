@@ -1,0 +1,53 @@
+.TH TEST-ZH 1 "2026-01-01" "pyname" "User Commands"
+.SH NAME
+test-zh \- check if filenames contain Chinese characters
+.SH SYNOPSIS
+.B test-zh
+[\fIOPTIONS\fR] \fIFILE\fR...
+.SH DESCRIPTION
+\fBtest-zh\fR checks if filenames contain Chinese characters. It returns exit code 0 if the condition is met, 1 otherwise.
+.PP
+By default, it checks if any filename contains Chinese characters, and all files must match.
+.SH OPTIONS
+.TP
+\fB-f\fR, \fB--full\fR
+Check if filename contains only Chinese characters (and whitespace).
+.TP
+\fB-a\fR, \fB--all\fR
+All files must match the condition (default).
+.TP
+\fB-1\fR, \fB--one\fR
+At least one file must match the condition.
+.TP
+\fB-h\fR, \fB--help\fR
+Show help message and exit.
+.TP
+\fB--version\fR
+Show version information and exit.
+.SH EXAMPLES
+Check if any filename contains Chinese characters:
+.RS
+.PP
+test-zh file1.txt 你好.txt
+.RE
+.PP
+Check if all filenames contain only Chinese characters:
+.RS
+.PP
+test-zh -f -a 你好.txt 世界.txt
+.RE
+.PP
+Check if at least one filename contains Chinese characters:
+.RS
+.PP
+test-zh -a file1.txt 你好.txt
+.RE
+.SH EXIT STATUS
+0 if condition is met, 1 otherwise.
+.SH AUTHOR
+Lenik <pyname@bodz.net>
+.SH "SEE ALSO"
+.BR pinyinize (1),
+.BR ren2py (1),
+.BR mkpylink (1)
+

@@ -1,0 +1,20 @@
+Source: pyname
+Section: utils
+Priority: optional
+Maintainer: Lenik <pyname@bodz.net>
+Build-Depends: debhelper-compat (= 13), python3-all, dh-python
+Standards-Version: 4.6.2
+Homepage: https://github.com/lenik/pyname
+Rules-Requires-Root: no
+
+Package: pyname
+Architecture: all
+Depends: ${python3:Depends}, ${misc:Depends}, python3-pypinyin, python3-jieba
+Description: Pinyin utilities for filenames with Chinese characters
+ pyname provides command-line utilities for working with Chinese characters
+ in filenames:
+ .
+  - test-zh: Check if filenames contain Chinese characters
+  - pinyinize: Convert Chinese text to pinyin (like echo)
+  - ren2py: Rename files containing Chinese characters to pinyin
+

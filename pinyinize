@@ -1,0 +1,213 @@
+#!/usr/bin/env python3
+"""pinyinize: Convert Chinese text to pinyin (like echo).
+
+Copyright (C) 2026 Lenik <pyname@bodz.net>
+License: GPL
+"""
+
+import argparse
+import re
+import sys
+
+try:
+    import jieba
+    from pypinyin import lazy_pinyin, Style, pinyin
+except ImportError as e:
+    print(f"Error: Required library not found. Install with: pip install pypinyin jieba", file=sys.stderr)
+    sys.exit(1)
+
+
+def contains_chinese(text: str) -> bool:
+    """Check if text contains any Chinese character."""
+    for char in text:
+        if '\u4e00' <= char <= '\u9fff':
+            return True
+    return False
+
+
+def segment_chinese(text: str) -> list[str]:
+    """Segment Chinese text into words."""
+    return list(jieba.cut(text))
+
+
+def to_pinyin(
+    text: str,
+    separator: str | None = None,
+    pascal_case: bool = True,
+    camel_case: bool = False,
+    uppercase: bool = False,
+    lowercase: bool = False,
+    with_tone: bool = False,
+) -> str:
+    """
+    Convert Chinese text to pinyin with various formatting options.
+    
+    Args:
+        text: Input text containing Chinese characters
+        separator: Separator between words (None=no separator, '_'=underscore, '-'=hyphen, ' '=space)
+        pascal_case: Convert to PascalCase (default)
+        camel_case: Convert to camelCase
+        uppercase: Convert to UPPERCASE
+        lowercase: Convert to lowercase
+        with_tone: Include tone marks
+    
+    Returns:
+        Formatted pinyin string
+    """
+    # Segment the text first
+    segments = segment_chinese(text)
+    
+    # Convert each segment to pinyin
+    pinyin_parts = []
+    for segment in segments:
+        if contains_chinese(segment):
+            # Use pinyin with context for better disambiguation
+            if with_tone:
+                # Get pinyin with tone numbers (returns list of lists)
+                py_list = pinyin(segment, style=Style.TONE3, heteronym=False)
+                # Flatten the nested list
+                py_list = [item[0] if item else '' for item in py_list]
+            else:
+                # Get pinyin without tones (returns flat list)
+                py_list = lazy_pinyin(segment)
+            pinyin_parts.extend(py_list)
+        else:
+            # Keep non-Chinese parts as-is
+            pinyin_parts.append(segment)
+    
+    # Apply formatting
+    # If separator or case options are specified, they override PascalCase
+    has_separator = separator is not None
+    has_case_option = uppercase or lowercase
+    
+    if camel_case:
+        # Convert to camelCase: first word lowercase, rest capitalized
+        words = pinyin_parts
+        if not words:
+            return ''
+        result = words[0].lower() + ''.join(word.capitalize() for word in words[1:])
+        # Don't apply additional case conversion for camelCase
+    elif pascal_case and not has_separator and not has_case_option:
+        # Convert to PascalCase: all words capitalized (default, only if no separator/case options)
+        words = pinyin_parts
+        if not words:
+            return ''
+        result = ''.join(word.capitalize() for word in words)
+        # Don't apply additional case conversion for PascalCase
+    else:
+        # Join with separator (default: no separator)
+        if separator is None:
+            result = ''.join(pinyin_parts)
+        else:
+            result = separator.join(pinyin_parts)
+        
+        # Apply case conversion
+        if uppercase:
+            result = result.upper()
+        elif lowercase:
+            result = result.lower()
+        else:
+            # Default: lowercase when separator or case option is used
+            result = result.lower()
+    
+    return result
+
+
+def main() -> int:
+    """Main entry point."""
+    parser = argparse.ArgumentParser(
+        prog='pinyinize',
+        description='Convert Chinese text to pinyin (like echo)',
+    )
+    parser.add_argument(
+        'args',
+        nargs='*',
+        help='Arguments to convert (like echo)',
+    )
+    parser.add_argument(
+        '-p', '--pascal',
+        action='store_true',
+        default=True,
+        help='Convert to PascalCase (default)',
+    )
+    parser.add_argument(
+        '-c', '--camel',
+        action='store_true',
+        help='Convert to camelCase',
+    )
+    parser.add_argument(
+        '-u',
+        action='store_true',
+        dest='underline',
+        help='Add underscore separator',
+    )
+    parser.add_argument(
+        '-k', '--kebab',
+        action='store_true',
+        help='Add hyphen separator',
+    )
+    parser.add_argument(
+        '-s', '--space',
+        action='store_true',
+        help='Add space separator',
+    )
+    parser.add_argument(
+        '-U', '--uppercase',
+        action='store_true',
+        help='Convert to UPPERCASE',
+    )
+    parser.add_argument(
+        '-l', '--lowercase',
+        action='store_true',
+        help='Convert to lowercase',
+    )
+    parser.add_argument(
+        '-t',
+        action='store_true',
+        dest='with_tone',
+        help='Include tone marks',
+    )
+    
+    args = parser.parse_args()
+    
+    # Determine separator
+    separator = None
+    if args.underline:
+        separator = '_'
+    elif args.kebab:
+        separator = '-'
+    elif args.space:
+        separator = ' '
+    
+    # Determine case style (pascal is default unless camel is specified)
+    pascal_case = not args.camel
+    
+    try:
+        # If no arguments, read from stdin
+        if not args.args:
+            text = sys.stdin.read().strip()
+        else:
+            # Join arguments with spaces (like echo)
+            text = ' '.join(args.args)
+        
+        # Convert to pinyin
+        result = to_pinyin(
+            text,
+            separator=separator,
+            pascal_case=pascal_case,
+            camel_case=args.camel,
+            uppercase=args.uppercase,
+            lowercase=args.lowercase,
+            with_tone=args.with_tone,
+        )
+        
+        # Output result
+        print(result)
+        return 0
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())

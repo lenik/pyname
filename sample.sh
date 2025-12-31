@@ -1,0 +1,215 @@
+#!/bin/bash
+    : ${RCSID:=$Id: - 0.4.0 2013-12-25 23:43:30 - $}
+    : ${PROGRAM_TITLE:="Modify a line of config file by pattern"}
+    : ${PROGRAM_SYNTAX:="[OPTIONS]    [--] FILE PATTERN LINES"
+                        "[OPTIONS] -k [--] FILE PATTERN"
+                        "(If no file is specified, then stdin/out is used)"}
+
+    : ${GREP:=grep}
+    : ${GREPL:=grepl}
+    : ${SEDIT:="sedit -k"}
+
+    LOGLEVEL=0
+
+    . shlib-import cliboot
+    option -m --message =STR    "Show message and edit status"
+    option -w --width =WIDTH    "Minimum width of the message to display"
+    option -E --extended-regexp "PATTERN is an extended regexp"
+    option -F --fixed-strings   "PATTERN is a set of strings each a line"
+    option -G --basic-regexp    "PATTERN is a basic regexp (BRE)"
+    option -P --perl-regexp     "PATTERN is a Perl regexp"
+    option -l --lines =NUM      "Force to NUM lines in text to add/kill"
+    option -t --magic-text      "Use PATTERN as magic text"
+    option -p --magic-prefix =STR "Prepend STR to the magic text"
+    option -s --magic-suffix =STR "Append STR to the magic text"
+    option -e --edit-status     "Exit true(0) if anything changed"
+    option -k --kill            "Remove the pattern/text line"
+    option -q --quiet
+    option -v --verbose
+    option -h --help
+    option    --version
+
+    message=
+    width=60
+
+    lines=
+    magic_en=
+    magic_prefix="# "
+    magic_suffix=
+    kill=
+    edit_status=
+    dirty=
+
+function setopt() {
+    case "$1" in
+        -m|--message)
+            message="$2";;
+        -w|--width)
+            width="$2";;
+        -E|--extended-regexp)
+            GREP="grep -E"
+            GREPL="grepl -E";;
+        -F|--fixed-strings)
+            GREP="grep -F"
+            GREPL="grepl -F";;
+        -G|--basic-regexp)
+            GREP="grep -G"
+            GREPL="grepl -G";;
+        -P|--perl-regexp)
+            GREP="grep -P"
+            GREPL="grepl -P";;
+        -l|--lines)
+            lines=$2;;
+        -t|--magic-text)
+            magic_en=1;;
+        -p|--magic-prefix)
+            magic_en=1
+            magic_prefix="$2";;
+        -s|--magic-suffix)
+            magic_en=1
+            magic_suffix="$2";;
+        -e|--edit-status)
+            edit_status=1;;
+        -k|--kill)
+            kill=1;;
+        -h|--help)
+            help $1; exit;;
+        -q|--quiet)
+            LOGLEVEL=$((LOGLEVEL - 1));;
+        -v|--verbose)
+            LOGLEVEL=$((LOGLEVEL + 1));;
+        --version)
+            show_version; exit;;
+        *)
+            quit "invalid option: $1";;
+    esac
+}
+
+function main() {
+
+    if [ $# -lt 2 ]; then
+        echo "FILE or PATTERN isn't specified. "
+        return 1
+    fi
+
+    file="$1"
+    pattern="$2"
+    shift 2
+
+    if [ -z "$lines" ]; then
+        if [ "$kill" = 1 ]; then
+            lines=1
+        else
+            lines=$#
+        fi
+    fi
+
+    if [ "$kill" != 1 ]; then
+        if [ $lines = 0 ]; then
+            echo "No line specified"
+            return 1
+        fi
+    fi
+
+    if [ -n "$message" ]; then
+        space='                                                                                                                                                                                                                                                     '
+        echo -n "$message"
+        if [ ${#message} -lt $width ]; then
+            echo -n "${space:0:width-${#message}}"
+        fi
+    fi
+
+    if [ "$file" = '-' ]; then
+        stdio=1
+        file=/tmp/lineconf-buf-$$-$RANDOM
+        cat >$file
+    fi
+
+    process $file "$@"
+    err=$?
+
+    if [ "$stdio" = 1 ]; then
+        cat $file
+        rm -f $file
+    fi
+
+    if [ -n "$message" ]; then
+        if [ "$dirty" = 1 ]; then
+            echo Done
+        else
+            echo Skip
+        fi
+    fi
+
+    if [ "$edit_status" = 1 ]; then
+        return "$((! dirty))"
+    else
+        return 0
+    fi
+}
+
+function process() {
+    local file="$1"
+    shift
+
+    inserttmp=/tmp/addonce-insert-$$-$RANDOM
+    # create new file
+    echo -n>$inserttmp
+
+    if [ "$magic_en" = 1 ]; then
+        echo "$magic_prefix$pattern$magic_suffix" >>$inserttmp
+    fi
+
+    for ((i = 0; i < lines; i++)); do
+        echo "$1" >>$inserttmp
+        shift
+    done
+
+    if [ "$magic_en" = 1 ]; then
+        ((lines++))
+    fi
+
+    if [ ! -f "$file" ]; then
+        if [ "$kill" = 1 ]; then
+            _log1 "Remove from non-exist file, skipped"
+            false
+        else
+            _log1 "Add new entry to new file"
+            cat $inserttmp >"$file"
+            true
+        fi
+    elif off=`$GREPL "$pattern" "$file"`; then
+        # replace or remove
+        ((off--))
+        if [ "$kill" = 1 ]; then
+            _log1 "Remove existing entry"
+            $SEDIT -e "$file" sh -c \
+                "head -$off; head -$lines >/dev/null; cat"
+        else
+            _log1 "Replace existing entry"
+            $SEDIT -e "$file" sh -c \
+                "head -$off; head -$lines >/dev/null; cat $inserttmp; cat"
+        fi
+    else
+        # pattern not found, append
+        if [ "$kill" = 1 ]; then
+            _log1 "Pattern not found, Remove nothing. "
+            false
+        else
+            _log1 "Add new entry"
+            cat $inserttmp >>$file
+            true
+        fi
+    fi
+
+    sedit_err=$?
+    _log2 "sedit-error: $sedit_err"
+
+    if [ $sedit_err = 0 ]; then
+        dirty=1
+    fi
+
+    rm -f $inserttmp
+}
+
+boot "$@"

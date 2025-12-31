@@ -1,0 +1,68 @@
+# Bash completion for pyname utilities
+# Copyright (C) 2026 Lenik <pyname@bodz.net>
+# License: GPL
+
+# test-zh completion
+_test_zh() {
+    local cur prev words cword
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    
+    case "$prev" in
+        -f|--full|-a|--any|-1|--one)
+            return 0
+            ;;
+    esac
+    
+    if [[ "$cur" == -* ]]; then
+        COMPREPLY=($(compgen -W "-f --full -a --any -1 --one -h --help --version" -- "$cur"))
+    else
+        COMPREPLY=($(compgen -f -- "$cur"))
+    fi
+}
+complete -F _test_zh test-zh
+
+# pinyinize completion
+_pinyinize() {
+    local cur prev words cword
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    
+    if [[ "$cur" == -* ]]; then
+        COMPREPLY=($(compgen -W "-p --pascal -c --camel -u -k --kebab -s --space -U --uppercase -l --lowercase -t -h --help --version" -- "$cur"))
+    fi
+}
+complete -F _pinyinize pinyinize
+
+# ren2py completion
+_ren2py() {
+    local cur prev words cword
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    
+    if [[ "$cur" == -* ]]; then
+        COMPREPLY=($(compgen -W "-p --pascal -c --camel -u -k --kebab -s --space -U --uppercase -l --lowercase -t -n --dry-run -q --quiet -v --verbose -h --help --version" -- "$cur"))
+    else
+        COMPREPLY=($(compgen -f -- "$cur"))
+    fi
+}
+complete -F _ren2py ren2py
+
+# mkpylink completion
+_mkpylink() {
+    local cur prev words cword
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    
+    if [[ "$cur" == -* ]]; then
+        COMPREPLY=($(compgen -W "-p --pascal -c --camel -u -k --kebab -s --space -U --uppercase -l --lowercase -t -f --force -n --nop --hard -q --quiet -v --verbose -h --help --version" -- "$cur"))
+    else
+        COMPREPLY=($(compgen -f -- "$cur"))
+    fi
+}
+complete -F _mkpylink mkpylink
+

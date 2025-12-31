@@ -1,0 +1,90 @@
+.TH PINYINIZE 1 "2026-01-01" "pyname" "User Commands"
+.SH NAME
+pinyinize \- convert Chinese text to pinyin
+.SH SYNOPSIS
+.B pinyinize
+[\fIOPTIONS\fR] [\fITEXT\fR]
+.SH DESCRIPTION
+\fBpinyinize\fR converts Chinese text to pinyin with various formatting options. If no text is provided, it reads from stdin.
+.PP
+By default, text is converted to PascalCase (e.g., "你好" becomes "NiHao").
+.SH OPTIONS
+.TP
+\fB-p\fR, \fB--pascal\fR
+Convert to PascalCase (default). Example: "你好" -> "NiHao"
+.TP
+\fB-c\fR, \fB--camel\fR
+Convert to camelCase. Example: "你好" -> "niHao"
+.TP
+\fB-u\fR
+Add underscore separator (snake_case). Example: "你好" -> "ni_hao"
+.TP
+\fB-k\fR, \fB--kebab\fR
+Add hyphen separator (kebab-case). Example: "你好" -> "ni-hao"
+.TP
+\fB-s\fR, \fB--space\fR
+Add space separator. Example: "你好" -> "ni hao"
+.TP
+\fB-U\fR, \fB--uppercase\fR
+Convert to UPPERCASE. Example: "你好" -> "NIHAO"
+.TP
+\fB-l\fR, \fB--lowercase\fR
+Convert to lowercase. Example: "你好" -> "nihao"
+.TP
+\fB-t\fR
+Include tone numbers. Example: "你好" -> "Ni3Hao3"
+.TP
+\fB-h\fR, \fB--help\fR
+Show help message and exit.
+.TP
+\fB--version\fR
+Show version information and exit.
+.SH EXAMPLES
+Basic conversion (PascalCase):
+.RS
+.PP
+echo "你好世界" | pinyinize
+.br
+Output: NiHaoShiJie
+.RE
+.PP
+With tone numbers:
+.RS
+.PP
+pinyinize -t 你好世界
+.br
+Output: Ni3Hao3Shi4Jie4
+.RE
+.PP
+Camel case:
+.RS
+.PP
+pinyinize -c 你好世界
+.br
+Output: niHaoShiJie
+.RE
+.PP
+Kebab case:
+.RS
+.PP
+pinyinize -k 你好世界
+.br
+Output: ni-hao-shi-jie
+.RE
+.PP
+Snake case:
+.RS
+.PP
+pinyinize -u 你好世界
+.br
+Output: ni_hao_shi_jie
+.RE
+.SH NOTES
+The first conversion may be slow due to jieba dictionary loading. Subsequent conversions are faster.
+.SH AUTHOR
+Lenik <pyname@bodz.net>
+.SH "SEE ALSO"
+.BR test-zh (1),
+.BR ren2py (1),
+.BR mkpylink (1)
+

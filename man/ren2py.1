@@ -1,0 +1,93 @@
+.TH REN2PY 1 "2026-01-01" "pyname" "User Commands"
+.SH NAME
+ren2py \- rename files containing Chinese characters to pinyin
+.SH SYNOPSIS
+.B ren2py
+[\fIOPTIONS\fR] \fIFILE\fR...
+.SH DESCRIPTION
+\fBren2py\fR renames files containing Chinese characters to pinyin. It uses \fBpinyinize\fR for conversion and supports all pinyinize formatting options.
+.PP
+Files without Chinese characters are skipped. The original filename extension is preserved.
+.SH OPTIONS
+.TP
+\fB-p\fR, \fB--pascal\fR
+Convert to PascalCase (default).
+.TP
+\fB-c\fR, \fB--camel\fR
+Convert to camelCase.
+.TP
+\fB-u\fR
+Add underscore separator (snake_case).
+.TP
+\fB-k\fR, \fB--kebab\fR
+Add hyphen separator (kebab-case).
+.TP
+\fB-s\fR, \fB--space\fR
+Add space separator.
+.TP
+\fB-U\fR, \fB--uppercase\fR
+Convert to UPPERCASE.
+.TP
+\fB-l\fR, \fB--lowercase\fR
+Convert to lowercase.
+.TP
+\fB-t\fR
+Include tone numbers.
+.TP
+\fB-n\fR, \fB--dry-run\fR
+Show what would be renamed without actually renaming.
+.TP
+\fB-q\fR, \fB--quiet\fR
+Suppress informational messages.
+.TP
+\fB-v\fR, \fB--verbose\fR
+Show detailed progress, including elapsed time for conversion.
+.TP
+\fB-h\fR, \fB--help\fR
+Show help message and exit.
+.TP
+\fB--version\fR
+Show version information and exit.
+.SH EXAMPLES
+Rename files:
+.RS
+.PP
+ren2py 你好.txt 世界.txt
+.br
+Renames: 你好.txt -> NiHao.txt, 世界.txt -> ShiJie.txt
+.RE
+.PP
+Dry run:
+.RS
+.PP
+ren2py -n 你好.txt
+.br
+Shows: Would rename: 你好.txt -> NiHao.txt
+.RE
+.PP
+With formatting options:
+.RS
+.PP
+ren2py -k -l 你好.txt
+.br
+Renames: 你好.txt -> ni-hao.txt
+.RE
+.PP
+Verbose output:
+.RS
+.PP
+ren2py -v 你好.txt
+.br
+Shows conversion progress and elapsed time
+.RE
+.SH NOTES
+The pinyin conversion may be slow on first use due to jieba dictionary loading. Use \fB-v\fR to see elapsed time for each conversion.
+.SH EXIT STATUS
+0 on success, 1 on error.
+.SH AUTHOR
+Lenik <pyname@bodz.net>
+.SH "SEE ALSO"
+.BR test-zh (1),
+.BR pinyinize (1),
+.BR mkpylink (1)
+

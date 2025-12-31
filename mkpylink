@@ -1,0 +1,217 @@
+#!/bin/bash
+# mkpylink: Create symlinks/hardlinks for files with Chinese characters using pinyin names.
+# Copyright (C) 2026 Lenik <pyname@bodz.net>
+# License: GPL
+
+: ${RCSID:=$Id: mkpylink 0.1.0 2026-01-01 00:00:00 - $}
+: ${PROGRAM_TITLE:="Create symlinks/hardlinks for files with Chinese characters using pinyin names"}
+: ${PROGRAM_SYNTAX:="[OPTIONS] FILE..."}
+
+: ${TESTZH:=test-zh}
+: ${PYINYINIZE:=pinyinize}
+: ${LN:=ln}
+
+. shlib-import cliboot
+
+# pinyinize options
+option -p --pascal        "Convert to PascalCase (default)"
+option -c --camel         "Convert to camelCase"
+option -u                 "Add underscore separator"
+option -k --kebab         "Add hyphen separator"
+option -s --space         "Add space separator"
+option -U --uppercase     "Convert to UPPERCASE"
+option -l --lowercase     "Convert to lowercase"
+option -t                 "Include tone marks"
+
+# mkpylink specific options
+option -f --force         "Overwrite existing links"
+option -n --nop           "Show what would be done without actually creating links"
+option     --hard         "Create hard links instead of symbolic links"
+option -q --quiet
+option -v --verbose
+option -h --help
+option     --version
+
+force=
+dry_run=
+hard_link=
+pinyinize_opts=()
+
+function setopt() {
+    case "$1" in
+        -p|--pascal)
+            pinyinize_opts+=(-p);;
+        -c|--camel)
+            pinyinize_opts+=(-c);;
+        -u)
+            pinyinize_opts+=(-u);;
+        -k|--kebab)
+            pinyinize_opts+=(-k);;
+        -s|--space)
+            pinyinize_opts+=(-s);;
+        -U|--uppercase)
+            pinyinize_opts+=(-U);;
+        -l|--lowercase)
+            pinyinize_opts+=(-l);;
+        -t)
+            pinyinize_opts+=(-t);;
+        -f|--force)
+            force=1;;
+        -n|--nop)
+            dry_run=1;;
+        --hard)
+            hard_link=1;;
+        -q|--quiet)
+            LOGLEVEL=$((LOGLEVEL - 1));;
+        -v|--verbose)
+            LOGLEVEL=$((LOGLEVEL + 1));;
+        -h|--help)
+            help; exit 0;;
+        --version)
+            show_version; exit 0;;
+        *)
+            quit "invalid option: $1";;
+    esac
+}
+
+function main() {
+    if [ $# -eq 0 ]; then
+        _error "No files specified"
+        return 1
+    fi
+
+    local errors=0
+    local created=0
+
+    for file in "$@"; do
+        if [ ! -e "$file" ]; then
+            _error "File not found: $file"
+            errors=$((errors + 1))
+            continue
+        fi
+
+        # Get directory and filename
+        local dir="${file%/*}"
+        local name="${file##*/}"
+        if [ "$dir" = "$file" ]; then
+            dir=.
+        fi
+        
+        # Check if filename contains Chinese (simple check using test-zh)
+        if ! "$TESTZH" "$name" >/dev/null 2>&1; then
+            # test-zh returns 0 if Chinese found, 1 if not
+            continue
+        fi
+
+        # Get file extension
+        local stem="${name%.*}"
+        local suffix=""
+        if [[ "$name" =~ \. ]]; then
+            suffix=".${name##*.}"
+        fi
+
+        # Convert stem to pinyin (this may be slow due to segmentation)
+        _log1 "Converting to pinyin: $stem"
+        local start_time
+        start_time=$(date +%s.%N 2>/dev/null || date +%s)
+        local new_stem
+        new_stem=$($PYINYINIZE "${pinyinize_opts[@]}" "$stem" 2>/dev/null)
+        local pinyin_err=$?
+        local end_time
+        end_time=$(date +%s.%N 2>/dev/null || date +%s)
+        
+        if [ $pinyin_err -ne 0 ] || [ -z "$new_stem" ]; then
+            _error "Error converting to pinyin: $file"
+            errors=$((errors + 1))
+            continue
+        fi
+        
+        # Calculate and format elapsed time
+        local elapsed_sec
+        elapsed_sec=$(echo "$end_time - $start_time" | bc 2>/dev/null || echo "0")
+        local elapsed_str
+        if command -v awk >/dev/null 2>&1; then
+            # Format as "Xs Yms" using awk
+            elapsed_str=$(echo "$elapsed_sec" | awk '{
+                secs = int($1)
+                ms = ($1 - secs) * 1000
+                printf "%ds %.3fms", secs, ms
+            }')
+        else
+            # Fallback: just show seconds
+            elapsed_str="${elapsed_sec}s"
+        fi
+        _log1 "Result: $stem -> $new_stem (${elapsed_str})"
+
+        local new_name="${new_stem}${suffix}"
+        local new_path
+        if [ "$dir" = "." ]; then
+            new_path="$new_name"
+        else
+            new_path="$dir/$new_name"
+        fi
+
+        # Skip if new name is same as old name
+        if [ "$new_name" = "$name" ]; then
+            continue
+        fi
+
+        # Check if target already exists
+        if [ -e "$new_path" ] || [ -L "$new_path" ]; then
+            if [ -z "$force" ]; then
+                _error "Link already exists: $new_path (use -f to overwrite)"
+                errors=$((errors + 1))
+                continue
+            fi
+            # Remove existing link/file
+            if [ -n "$dry_run" ]; then
+                # Dry-run messages should always be shown (use _error)
+                _error "Would remove existing: $new_path"
+            else
+                rm -f "$new_path" || {
+                    _error "Cannot overwrite: $new_path"
+                    errors=$((errors + 1))
+                    continue
+                }
+            fi
+        fi
+
+        # Symlink target is always just the filename (relative path)
+        # since symlink is created in the same directory as the target
+        local link_target="$name"
+
+        if [ -n "$dry_run" ]; then
+            local link_type="hard link"
+            [ -z "$hard_link" ] && link_type="symlink"
+            # Dry-run messages should always be shown (use _error)
+            _log2 "Would create $link_type: $new_path -> $link_target"
+        else
+            if [ -n "$hard_link" ]; then
+                # For hard links, use the file path directly
+                if $LN "$file" "$new_path" 2>/dev/null; then
+                    _log2 "Created hard link: $new_path -> $file"
+                    created=$((created + 1))
+                else
+                    _error "Error creating hard link for $file"
+                    errors=$((errors + 1))
+                fi
+            else
+                if $LN -s "$link_target" "$new_path" 2>/dev/null; then
+                    _log2 "Created symlink: $new_path -> $link_target"
+                    created=$((created + 1))
+                else
+                    _error "Error creating symlink for $file"
+                    errors=$((errors + 1))
+                fi
+            fi
+        fi
+    done
+
+    if [ $created -eq 0 ] && [ -z "$dry_run" ]; then
+        _log2 "No links created (no Chinese characters found or no changes needed)"
+    fi
+
+    return $errors
+}
+
+boot "$@"
